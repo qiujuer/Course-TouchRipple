@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_demo"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="net.qiujuer.sample.touchripple.DemoActivity">
+
+    <net.qiujuer.genius.ui.widget.Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/grey_200"
+        android:minHeight="64dp"
+        android:text="Button"
+        app:gTouchColor="@color/black_alpha_48"
+        app:gTouchCornerRadius="0dp"
+        app:gTouchDurationRate="2"
+        app:gTouchEffect="ripple" />
+
+    <net.qiujuer.genius.ui.widget.Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/lay_8"
+        android:background="@color/grey_200"
+        android:minHeight="64dp"
+        android:text="Button"
+        app:gTouchColor="@color/black_alpha_48"
+        app:gTouchCornerRadius="0dp"
+        app:gTouchCornerRadiusBL="32dp"
+        app:gTouchCornerRadiusBR="8dp"
+        app:gTouchCornerRadiusTL="8dp"
+        app:gTouchCornerRadiusTR="32dp"
+        app:gTouchEffect="ripple" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/lay_8"
+        android:orientation="horizontal">
+
+        <net.qiujuer.genius.ui.widget.Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="2dp"
+            android:layout_weight="1"
+            android:background="@color/colorPrimary"
+            android:text="White"
+            android:textColor="@color/white"
+            app:gTouchColor="@color/white_alpha_96"
+            app:gTouchCornerRadius="0dp" />
+
+        <net.qiujuer.genius.ui.widget.Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="2dp"
+            android:layout_weight="1"
+            android:background="@drawable/ic_bg_default"
+            android:text="White"
+            android:textColor="@color/white"
+            app:gTouchColor="@color/white_alpha_96"
+            app:gTouchCornerRadius="8dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/lay_8"
+        android:orientation="horizontal">
+
+        <net.qiujuer.genius.ui.widget.Button
+            android:layout_width="90dp"
+            android:layout_height="90dp"
+            android:layout_marginRight="2dp"
+            android:background="#08000000"
+            android:text="Circle"
+            android:textColor="@color/colorPrimary"
+            app:gTouchColor="#90FF4081"
+            app:gTouchCornerRadius="45dp"
+            app:gTouchEffect="ripple" />
+
+    </LinearLayout>
+
+    <FrameLayout
+
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/lay_8"
+        android:layout_weight="1">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="This is FrameLayout" />
+
+        <FrameLayout
+            android:id="@+id/lay_shader"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="@dimen/lay_16" />
+
+    </FrameLayout>
+</LinearLayout>
