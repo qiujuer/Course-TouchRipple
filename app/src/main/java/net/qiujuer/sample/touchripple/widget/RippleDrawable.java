@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 import android.util.Log;
@@ -60,12 +61,18 @@ public class RippleDrawable extends Drawable {
     }
 
     private void onTouchDown(float x, float y) {
-        mRipplePointX = x;
-        mRipplePointY = y;
+        // 设置按下时的坐标
+        mDownPointX = x;
+        mDownPointY = y;
         startEnterRunnable();
     }
 
     private void onTouchMove(float x, float y) {
+        /**
+        mRipplePointX = x;
+        mRipplePointY = y;
+        invalidateSelf();
+         */
     }
 
     private void onTouchUp(float x, float y) {
@@ -92,27 +99,100 @@ public class RippleDrawable extends Drawable {
     private float mEnterProgress = 0;
     // 进入动画查值器,用于实现从快到慢的效果
     private Interpolator mEnterInterpolator = new DecelerateInterpolator(2);
+    private float mIncrement = 16f / 2800;
     // 动画的回调
     private Runnable mEnterRunnable = new Runnable() {
         @Override
         public void run() {
-            mEnterProgress = mEnterProgress + 0.01f;
+            mEnterProgress = mEnterProgress + mIncrement;
 
             if (mEnterProgress > 1) {
                 return;
             }
 
             float realProgress = mEnterInterpolator.getInterpolation(mEnterProgress);
-
-            mRippleRadius = 360 * realProgress;
-            invalidateSelf();
+            onProgressChanged(realProgress);
             // 延迟16毫秒,保证界面刷新频率接近60FPS
             scheduleSelf(this, SystemClock.uptimeMillis() + 16);
         }
     };
 
+    private void onProgressChanged(float progress) {
+        mRipplePointX = getProgressValue(mDownPointX, mCenterPointX, progress);
+        mRipplePointY = getProgressValue(mDownPointY, mCenterPointY, progress);
+        mRippleRadius = getProgressValue(mStartRadius, mEndRadius, progress);
+
+        // 背景颜色改变
+        int alpha = (int) getProgressValue(0, 48, progress);
+        mBackgroundColor = changeColorAlpha(0xFFFF0000, alpha);
+        invalidateSelf();
+    }
+
+    private float getProgressValue(float start, float end, float progress) {
+        return start + (end - start) * progress;
+    }
+
+    // 首先确定点击位置,并设置为启动时的圆心
+    // 圆心的最终点为控件的中间位置
+    // 圆的半径最终为控件圆心到控件边缘的长度
+    // 背景颜色透明度从无到有的过程
+
+    // 按下时坐标
+    private float mDownPointX, mDownPointY;
+    // 控件中心的坐标
+    private float mCenterPointX, mCenterPointY;
+    // 半径改变区间
+    private float mStartRadius, mEndRadius;
+    // 背景的颜色
+    private int mBackgroundColor;
+
+    /**
+     * 当控件界面Size改变的时候触发
+     * @param bounds Rect
+     */
+    @Override
+    protected void onBoundsChange(Rect bounds) {
+        super.onBoundsChange(bounds);
+        mCenterPointX = bounds.centerX();
+        mCenterPointY = bounds.centerY();
+
+        float maxRadius = Math.max(mCenterPointX, mCenterPointY);
+        mStartRadius = maxRadius * 0f;
+        mEndRadius = maxRadius * 0.8f;
+    }
+
+    /**
+     * 更改颜色透明度的方法
+     *
+     * @param color 颜色
+     * @param alpha 新的透明度
+     * @return 返回一个具有新透明度的颜色
+     */
+    private int changeColorAlpha(int color, int alpha) {
+        // 均衡透明度
+        /*
+        int a = (color >>> 24) & 0xFF;
+        int realAlpha = (int) (a * (alpha / 255f));
+        */
+        int r = (color >>> 16) & 0xFF;
+        int g = (color >>> 8) & 0xFF;
+        int b = (color) & 0xFF;
+        return alpha << 24 | r << 16 | g << 8 | b;
+    }
+
     @Override
     public void draw(Canvas canvas) {
+        // 通过画笔辅助颜色透明度改变
+        /*
+        int preColor = mPaint.getColor();
+        mPaint.setColor(0xFF000000);
+        mPaint.setAlpha(mBgAlpha);
+        int newColor = mPaint.getColor();
+        */
+
+        // 画上一个背景
+        canvas.drawColor(mBackgroundColor);
+
         // 画上一个圆
         canvas.drawCircle(mRipplePointX, mRipplePointY,
                 mRippleRadius,
