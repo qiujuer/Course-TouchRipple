@@ -10,6 +10,7 @@ import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 
@@ -41,6 +42,8 @@ public class RippleDrawable extends Drawable {
         // setColorFilter(new LightingColorFilter(0xFFFF0000,0x00330000));
     }
 
+    private boolean mTouchRelease;
+
     public void onTouch(MotionEvent event) {
 
         // 判断点击操作类型
@@ -64,22 +67,29 @@ public class RippleDrawable extends Drawable {
         // 设置按下时的坐标
         mDownPointX = x;
         mDownPointY = y;
+        mTouchRelease = false;
         startEnterRunnable();
     }
 
     private void onTouchMove(float x, float y) {
         /**
-        mRipplePointX = x;
-        mRipplePointY = y;
-        invalidateSelf();
+         mRipplePointX = x;
+         mRipplePointY = y;
+         invalidateSelf();
          */
     }
 
     private void onTouchUp(float x, float y) {
         //unscheduleSelf(mEnterRunnable);
+        mTouchRelease = true;
+        if (!mRunning)
+            startExitRunnable();
     }
 
     private void onTouchCancel(float x, float y) {
+        mTouchRelease = true;
+        if (!mRunning)
+            startExitRunnable();
     }
 
     public void setRippleColor(int color) {
@@ -90,9 +100,12 @@ public class RippleDrawable extends Drawable {
     }
 
     private void startEnterRunnable() {
+        mPaintAlpha = 255;
         mEnterProgress = 0;
         unscheduleSelf(mEnterRunnable);
         scheduleSelf(mEnterRunnable, SystemClock.uptimeMillis());
+
+        mRunning = true;
     }
 
     // 进入动画进度值
@@ -107,6 +120,8 @@ public class RippleDrawable extends Drawable {
             mEnterProgress = mEnterProgress + mEnterIncrement;
 
             if (mEnterProgress > 1) {
+                if(mTouchRelease)
+                    startExitRunnable();
                 return;
             }
 
@@ -128,6 +143,49 @@ public class RippleDrawable extends Drawable {
         invalidateSelf();
     }
 
+    private boolean mRunning = false;
+
+    private void startExitRunnable() {
+        mExitProgress = 0;
+        unscheduleSelf(mEnterRunnable);
+        unscheduleSelf(mExitRunnable);
+        scheduleSelf(mExitRunnable, SystemClock.uptimeMillis());
+    }
+
+    // 退出动画进度值
+    private float mExitProgress = 0;
+    // 退出动画查值器,用于实现从慢到快的效果
+    private Interpolator mExitInterpolator = new AccelerateInterpolator(2);
+    private float mExitIncrement = 16f / 280;
+    private Runnable mExitRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mExitProgress = mExitProgress + mExitIncrement;
+
+            if (mExitProgress > 1) {
+                onExitProgress(1);
+                mRunning = false;
+                return;
+            }
+
+            float realProgress = mExitInterpolator.getInterpolation(mExitProgress);
+            onExitProgress(realProgress);
+            // 延迟16毫秒,保证界面刷新频率接近60FPS
+            scheduleSelf(this, SystemClock.uptimeMillis() + 16);
+        }
+    };
+
+    private int mPaintAlpha = 255;
+
+    private void onExitProgress(float progress) {
+        mPaintAlpha = (int) getProgressValue(255, 0, progress);
+
+        // 背景颜色改变
+        int alpha = (int) getProgressValue(48, 0, progress);
+        mBackgroundColor = changeColorAlpha(0xFFFF0000, alpha);
+        invalidateSelf();
+    }
+
     private float getProgressValue(float start, float end, float progress) {
         return start + (end - start) * progress;
     }
@@ -143,6 +201,7 @@ public class RippleDrawable extends Drawable {
 
     /**
      * 当控件界面Size改变的时候触发
+     *
      * @param bounds Rect
      */
     @Override
@@ -188,6 +247,7 @@ public class RippleDrawable extends Drawable {
         // 画上一个背景
         canvas.drawColor(mBackgroundColor);
 
+        mPaint.setAlpha(mPaintAlpha);
         // 画上一个圆
         canvas.drawCircle(mRipplePointX, mRipplePointY,
                 mRippleRadius,
