@@ -99,12 +99,12 @@ public class RippleDrawable extends Drawable {
     private float mEnterProgress = 0;
     // 进入动画查值器,用于实现从快到慢的效果
     private Interpolator mEnterInterpolator = new DecelerateInterpolator(2);
-    private float mIncrement = 16f / 2800;
+    private float mEnterIncrement = 16f / 2800;
     // 动画的回调
     private Runnable mEnterRunnable = new Runnable() {
         @Override
         public void run() {
-            mEnterProgress = mEnterProgress + mIncrement;
+            mEnterProgress = mEnterProgress + mEnterIncrement;
 
             if (mEnterProgress > 1) {
                 return;
@@ -131,11 +131,6 @@ public class RippleDrawable extends Drawable {
     private float getProgressValue(float start, float end, float progress) {
         return start + (end - start) * progress;
     }
-
-    // 首先确定点击位置,并设置为启动时的圆心
-    // 圆心的最终点为控件的中间位置
-    // 圆的半径最终为控件圆心到控件边缘的长度
-    // 背景颜色透明度从无到有的过程
 
     // 按下时坐标
     private float mDownPointX, mDownPointY;
