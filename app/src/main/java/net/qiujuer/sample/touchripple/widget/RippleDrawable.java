@@ -35,7 +35,7 @@ public class RippleDrawable extends Drawable {
         // 防抖动
         mPaint.setDither(true);
 
-        setRippleColor(Color.RED);
+        setRippleColor(0x48000000);
 
         // ARGB 0xFF FF FF FF
         // 设置滤镜
@@ -100,7 +100,7 @@ public class RippleDrawable extends Drawable {
     }
 
     private void startEnterRunnable() {
-        mPaintAlpha = 255;
+        mCircleAlpha = 255;
         mEnterProgress = 0;
         unscheduleSelf(mEnterRunnable);
         scheduleSelf(mEnterRunnable, SystemClock.uptimeMillis());
@@ -112,7 +112,7 @@ public class RippleDrawable extends Drawable {
     private float mEnterProgress = 0;
     // 进入动画查值器,用于实现从快到慢的效果
     private Interpolator mEnterInterpolator = new DecelerateInterpolator(2);
-    private float mEnterIncrement = 16f / 2800;
+    private float mEnterIncrement = 16f / 360;
     // 动画的回调
     private Runnable mEnterRunnable = new Runnable() {
         @Override
@@ -120,26 +120,25 @@ public class RippleDrawable extends Drawable {
             mEnterProgress = mEnterProgress + mEnterIncrement;
 
             if (mEnterProgress > 1) {
-                if(mTouchRelease)
+                if (mTouchRelease)
                     startExitRunnable();
                 return;
             }
 
             float realProgress = mEnterInterpolator.getInterpolation(mEnterProgress);
-            onProgressChanged(realProgress);
+            onEnterProgress(realProgress);
             // 延迟16毫秒,保证界面刷新频率接近60FPS
             scheduleSelf(this, SystemClock.uptimeMillis() + 16);
         }
     };
 
-    private void onProgressChanged(float progress) {
+    private void onEnterProgress(float progress) {
         mRipplePointX = getProgressValue(mDownPointX, mCenterPointX, progress);
         mRipplePointY = getProgressValue(mDownPointY, mCenterPointY, progress);
         mRippleRadius = getProgressValue(mStartRadius, mEndRadius, progress);
 
         // 背景颜色改变
-        int alpha = (int) getProgressValue(0, 48, progress);
-        mBackgroundColor = changeColorAlpha(0xFFFF0000, alpha);
+        mBgAlpha = getProgressValue(0, 186, progress);
         invalidateSelf();
     }
 
@@ -156,7 +155,7 @@ public class RippleDrawable extends Drawable {
     private float mExitProgress = 0;
     // 退出动画查值器,用于实现从慢到快的效果
     private Interpolator mExitInterpolator = new AccelerateInterpolator(2);
-    private float mExitIncrement = 16f / 280;
+    private float mExitIncrement = 16f / 520;
     private Runnable mExitRunnable = new Runnable() {
         @Override
         public void run() {
@@ -175,14 +174,11 @@ public class RippleDrawable extends Drawable {
         }
     };
 
-    private int mPaintAlpha = 255;
-
     private void onExitProgress(float progress) {
-        mPaintAlpha = (int) getProgressValue(255, 0, progress);
+        mCircleAlpha = getProgressValue(255, 0, progress);
 
         // 背景颜色改变
-        int alpha = (int) getProgressValue(48, 0, progress);
-        mBackgroundColor = changeColorAlpha(0xFFFF0000, alpha);
+        mBgAlpha = getProgressValue(186, 0, progress);
         invalidateSelf();
     }
 
@@ -196,8 +192,6 @@ public class RippleDrawable extends Drawable {
     private float mCenterPointX, mCenterPointY;
     // 半径改变区间
     private float mStartRadius, mEndRadius;
-    // 背景的颜色
-    private int mBackgroundColor;
 
     /**
      * 当控件界面Size改变的时候触发
@@ -215,24 +209,7 @@ public class RippleDrawable extends Drawable {
         mEndRadius = maxRadius * 0.8f;
     }
 
-    /**
-     * 更改颜色透明度的方法
-     *
-     * @param color 颜色
-     * @param alpha 新的透明度
-     * @return 返回一个具有新透明度的颜色
-     */
-    private int changeColorAlpha(int color, int alpha) {
-        // 均衡透明度
-        /*
-        int a = (color >>> 24) & 0xFF;
-        int realAlpha = (int) (a * (alpha / 255f));
-        */
-        int r = (color >>> 16) & 0xFF;
-        int g = (color >>> 8) & 0xFF;
-        int b = (color) & 0xFF;
-        return alpha << 24 | r << 16 | g << 8 | b;
-    }
+    private float mBgAlpha, mCircleAlpha;
 
     @Override
     public void draw(Canvas canvas) {
@@ -244,14 +221,27 @@ public class RippleDrawable extends Drawable {
         int newColor = mPaint.getColor();
         */
 
-        // 画上一个背景
-        canvas.drawColor(mBackgroundColor);
+        int preAlpha = mPaint.getAlpha();
+        int bgAlpha = (int) (preAlpha * (mBgAlpha / 255));
+        int maxCircleAlpha = getCircleAlpha(preAlpha, bgAlpha);
+        int circleAlpha = (int) (maxCircleAlpha * (mCircleAlpha / 255));
 
-        mPaint.setAlpha(mPaintAlpha);
+        mPaint.setAlpha(bgAlpha);
+        // 画上一个背景
+        canvas.drawColor(mPaint.getColor());
+
+        mPaint.setAlpha(circleAlpha);
         // 画上一个圆
         canvas.drawCircle(mRipplePointX, mRipplePointY,
                 mRippleRadius,
                 mPaint);
+
+        mPaint.setAlpha(preAlpha);
+    }
+
+    private int getCircleAlpha(int preAlpha, int nowAlpha) {
+        int dAlpha = preAlpha - nowAlpha;
+        return (255 * dAlpha) / (255 - nowAlpha);
     }
 
     @Override
