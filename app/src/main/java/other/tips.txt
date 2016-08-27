@@ -1,0 +1,27 @@
+        // ARGB 0xFF FF FF FF
+        // 设置滤镜
+        // setColorFilter(new LightingColorFilter(0xFFFF0000,0x00330000));
+
+3-2
+1.首先确定点击位置,设置为启动时的圆心
+2.圆心是逐渐移动的,结束位置为控件的中心区域
+3.圆的半径最大值为中心到边缘的最大长度
+4.背景颜色透明度逐渐加深的过程
+
+3-3
+1.基本实现退出动画,并设置好退出动画触发的时机
+2.实现背景减淡的过程
+3.实现圆形区域减淡的过程
+4.学习多个半透明颜色块叠加的算法
+4.整理涟漪代码
+
+    // 更改颜色透明度方法
+    private int changeColorAlpha(int color, int alpha) {
+        int a = (color >> 24) & 0xFF;
+        a = (int) (a * (alpha / 255f));
+
+        int r = (color >> 16) & 0xFF;
+        int g = (color >> 8) & 0xFF;
+        int b = (color) & 0xFF;
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }

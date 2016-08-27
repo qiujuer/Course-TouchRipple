@@ -1,7 +1,6 @@
 package net.qiujuer.sample.touchripple.widget;
 
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
@@ -19,6 +18,10 @@ import android.view.animation.Interpolator;
  */
 
 public class RippleDrawable extends Drawable {
+    // 最大的透明度
+    private static final int MAX_ALPHA_BG = 172;
+    private static final int MAX_ALPHA_IRCLE = 255;
+
     // Drawable 0~255 透明度
     private int mAlpha = 255;
     private int mRippleColor = 0;
@@ -29,23 +32,31 @@ public class RippleDrawable extends Drawable {
     // 半径
     private float mRippleRadius = 0;
 
-    public RippleDrawable() {
+    // 背景透明度, 圆形透明度
+    private int mBgAlpha = 0, mCircleAlpha = MAX_ALPHA_IRCLE;
+
+    // 标示用户手是否抬起
+    private boolean mTouchRelease;
+
+    // 按下时的点击点
+    private float mDonePointX, mDonePointY;
+    // 控件的中心区域点
+    private float mCenterPointX, mCenterPointY;
+    // 开始和结束的半径
+    private float mStartRadius, mEndRadius;
+
+    public RippleDrawable(int color) {
         // 设置抗锯齿
         mPaint.setAntiAlias(true);
         // 防抖动
         mPaint.setDither(true);
-
-        setRippleColor(0x48000000);
-
-        // ARGB 0xFF FF FF FF
-        // 设置滤镜
-        // setColorFilter(new LightingColorFilter(0xFFFF0000,0x00330000));
+        // 设置画笔为填充方式
+        mPaint.setStyle(Paint.Style.FILL);
+        // 设置涟漪颜色
+        setRippleColor(color);
     }
 
-    private boolean mTouchRelease;
-
     public void onTouch(MotionEvent event) {
-
         // 判断点击操作类型
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
@@ -64,55 +75,79 @@ public class RippleDrawable extends Drawable {
     }
 
     private void onTouchDown(float x, float y) {
-        // 设置按下时的坐标
-        mDownPointX = x;
-        mDownPointY = y;
+        mDonePointX = x;
+        mDonePointY = y;
+        // 按下,没有抬起
         mTouchRelease = false;
         startEnterRunnable();
     }
 
     private void onTouchMove(float x, float y) {
-        /**
-         mRipplePointX = x;
-         mRipplePointY = y;
-         invalidateSelf();
-         */
+        //TODO
     }
 
     private void onTouchUp(float x, float y) {
-        //unscheduleSelf(mEnterRunnable);
+        // 标示手抬起
         mTouchRelease = true;
-        if (!mRunning)
+        // 当,进入动画完成时,启动退出动画
+        if (mEnterDone) {
             startExitRunnable();
+        }
     }
 
     private void onTouchCancel(float x, float y) {
+        // 标示手抬起
         mTouchRelease = true;
-        if (!mRunning)
+        // 当,进入动画完成时,启动退出动画
+        if (mEnterDone) {
             startExitRunnable();
+        }
     }
 
+    /**
+     * 设置涟漪的颜色
+     * @param color Color
+     */
     public void setRippleColor(int color) {
-        // 不建议直接设置
-        // mPaint.setColor(color);
         mRippleColor = color;
         onColorOrAlphaChange();
     }
 
+    /**
+     * 启动进入动画
+     */
     private void startEnterRunnable() {
-        mCircleAlpha = 255;
-        mEnterProgress = 0;
-        unscheduleSelf(mEnterRunnable);
-        scheduleSelf(mEnterRunnable, SystemClock.uptimeMillis());
+        mCircleAlpha = MAX_ALPHA_IRCLE;
 
-        mRunning = true;
+        mEnterProgress = 0;
+        mEnterDone = false;
+        // 取消事物的操作
+        unscheduleSelf(mExitRunnable);
+        unscheduleSelf(mEnterRunnable);
+        // 注入一个进入动画
+        scheduleSelf(mEnterRunnable, SystemClock.uptimeMillis());
     }
 
+    /**
+     * 启动退出动画
+     */
+    private void startExitRunnable() {
+        mExitProgress = 0;
+        // 取消事物的操作
+        unscheduleSelf(mEnterRunnable);
+        unscheduleSelf(mExitRunnable);
+        // 注入一个退出动画
+        scheduleSelf(mExitRunnable, SystemClock.uptimeMillis());
+    }
+
+    // 标示进入动画是否完成
+    private boolean mEnterDone;
     // 进入动画进度值
     private float mEnterProgress = 0;
+    // 每次递增的进度值
+    private float mEnterIncrement = 16f / 360;
     // 进入动画查值器,用于实现从快到慢的效果
     private Interpolator mEnterInterpolator = new DecelerateInterpolator(2);
-    private float mEnterIncrement = 16f / 360;
     // 动画的回调
     private Runnable mEnterRunnable = new Runnable() {
         @Override
@@ -120,65 +155,96 @@ public class RippleDrawable extends Drawable {
             mEnterProgress = mEnterProgress + mEnterIncrement;
 
             if (mEnterProgress > 1) {
-                if (mTouchRelease)
-                    startExitRunnable();
+                onEnterProgress(1);
+                onEnterDone();
                 return;
             }
 
             float realProgress = mEnterInterpolator.getInterpolation(mEnterProgress);
             onEnterProgress(realProgress);
+
             // 延迟16毫秒,保证界面刷新频率接近60FPS
             scheduleSelf(this, SystemClock.uptimeMillis() + 16);
         }
     };
 
-    private void onEnterProgress(float progress) {
-        mRipplePointX = getProgressValue(mDownPointX, mCenterPointX, progress);
-        mRipplePointY = getProgressValue(mDownPointY, mCenterPointY, progress);
-        mRippleRadius = getProgressValue(mStartRadius, mEndRadius, progress);
-
-        // 背景颜色改变
-        mBgAlpha = getProgressValue(0, 186, progress);
-        invalidateSelf();
+    /**
+     * 进入动画完成时触发
+     */
+    private void onEnterDone() {
+        Log.e("TAG", "onEnterDone");
+        mEnterDone = true;
+        // 当用户手放开时,启动退出动画
+        if (mTouchRelease) {
+            startExitRunnable();
+        }
     }
 
-    private boolean mRunning = false;
+    /**
+     * 进入动画刷新方法
+     *
+     * @param progress 进度值
+     */
+    private void onEnterProgress(float progress) {
+        mRippleRadius = getProgressValue(mStartRadius, mEndRadius, progress);
+        mRipplePointX = getProgressValue(mDonePointX, mCenterPointX, progress);
+        mRipplePointY = getProgressValue(mDonePointY, mCenterPointY, progress);
 
-    private void startExitRunnable() {
-        mExitProgress = 0;
-        unscheduleSelf(mEnterRunnable);
-        unscheduleSelf(mExitRunnable);
-        scheduleSelf(mExitRunnable, SystemClock.uptimeMillis());
+        mBgAlpha = (int) getProgressValue(0, MAX_ALPHA_BG, progress);
+
+        invalidateSelf();
     }
 
     // 退出动画进度值
     private float mExitProgress = 0;
+    // 每次递增的进度值
+    private float mExitIncrement = 16f / 300;
     // 退出动画查值器,用于实现从慢到快的效果
     private Interpolator mExitInterpolator = new AccelerateInterpolator(2);
-    private float mExitIncrement = 16f / 520;
+    // 动画的回调
     private Runnable mExitRunnable = new Runnable() {
         @Override
         public void run() {
+            // 进入时,首先判断进入动画是否具有
+            if (!mEnterDone)
+                return;
+
             mExitProgress = mExitProgress + mExitIncrement;
 
             if (mExitProgress > 1) {
                 onExitProgress(1);
-                mRunning = false;
+                onExitDone();
                 return;
             }
 
             float realProgress = mExitInterpolator.getInterpolation(mExitProgress);
             onExitProgress(realProgress);
+
             // 延迟16毫秒,保证界面刷新频率接近60FPS
             scheduleSelf(this, SystemClock.uptimeMillis() + 16);
         }
     };
 
-    private void onExitProgress(float progress) {
-        mCircleAlpha = getProgressValue(255, 0, progress);
+    /**
+     * 当退出动画完成时触发
+     */
+    private void onExitDone() {
+        Log.e("TAG", "onExitDone");
+        // TODO
+    }
 
-        // 背景颜色改变
-        mBgAlpha = getProgressValue(186, 0, progress);
+    /**
+     * 退出动画刷新方法
+     *
+     * @param progress 进度值
+     */
+    private void onExitProgress(float progress) {
+        Log.e("TAG", "onExitProgress:" + progress);
+        // 背景减淡
+        mBgAlpha = (int) getProgressValue(MAX_ALPHA_BG, 0, progress);
+        // 圆形减淡
+        mCircleAlpha = (int) getProgressValue(MAX_ALPHA_IRCLE, 0, progress);
+
         invalidateSelf();
     }
 
@@ -186,16 +252,9 @@ public class RippleDrawable extends Drawable {
         return start + (end - start) * progress;
     }
 
-    // 按下时坐标
-    private float mDownPointX, mDownPointY;
-    // 控件中心的坐标
-    private float mCenterPointX, mCenterPointY;
-    // 半径改变区间
-    private float mStartRadius, mEndRadius;
 
     /**
-     * 当控件界面Size改变的时候触发
-     *
+     * 界面大小改变时触发,我们在这里运算中心点,以及半径
      * @param bounds Rect
      */
     @Override
@@ -204,44 +263,42 @@ public class RippleDrawable extends Drawable {
         mCenterPointX = bounds.centerX();
         mCenterPointY = bounds.centerY();
 
+        // 得到圆的最大半径
         float maxRadius = Math.max(mCenterPointX, mCenterPointY);
         mStartRadius = maxRadius * 0f;
         mEndRadius = maxRadius * 0.8f;
     }
 
-    private float mBgAlpha, mCircleAlpha;
+    /**
+     * 通过两块玻璃叠加后颜色更深,
+     * 光线透过更少的算法反向推出其中一块玻璃块的值的算法
+     * @param preAlpha Z值,结合后的值
+     * @param bgAlpha Y值, 其中一块玻璃块的值
+     * @return 返回另外一块玻璃块的值
+     */
+    private int getCircleAlpha(int preAlpha, int bgAlpha) {
+        int dAlpha = preAlpha - bgAlpha;
+        return (int) ((dAlpha * 255f) / (255f - bgAlpha));
+    }
 
     @Override
     public void draw(Canvas canvas) {
-        // 通过画笔辅助颜色透明度改变
-        /*
-        int preColor = mPaint.getColor();
-        mPaint.setColor(0xFF000000);
-        mPaint.setAlpha(mBgAlpha);
-        int newColor = mPaint.getColor();
-        */
-
         int preAlpha = mPaint.getAlpha();
-        int bgAlpha = (int) (preAlpha * (mBgAlpha / 255));
+        int bgAlpha = (int) (preAlpha * (mBgAlpha / 255f));
         int maxCircleAlpha = getCircleAlpha(preAlpha, bgAlpha);
-        int circleAlpha = (int) (maxCircleAlpha * (mCircleAlpha / 255));
+        int circleAlpha = (int) (maxCircleAlpha * (mCircleAlpha / 255f));
 
+        // 绘制背景区域颜色
         mPaint.setAlpha(bgAlpha);
-        // 画上一个背景
         canvas.drawColor(mPaint.getColor());
 
-        mPaint.setAlpha(circleAlpha);
         // 画上一个圆
+        mPaint.setAlpha(circleAlpha);
         canvas.drawCircle(mRipplePointX, mRipplePointY,
                 mRippleRadius,
                 mPaint);
 
         mPaint.setAlpha(preAlpha);
-    }
-
-    private int getCircleAlpha(int preAlpha, int nowAlpha) {
-        int dAlpha = preAlpha - nowAlpha;
-        return (255 * dAlpha) / (255 - nowAlpha);
     }
 
     @Override
@@ -264,12 +321,8 @@ public class RippleDrawable extends Drawable {
             // 得到颜色本身的透明度
             // 0x30
             int pAlpha = mPaint.getAlpha();
-            //pAlpha = Color.alpha(mRippleColor);
-
             int realAlpha = (int) (pAlpha * (mAlpha / 255f));
-
             mPaint.setAlpha(realAlpha);
-
             Log.e("TAG", "Old:" + mRippleColor + " new:" + mPaint.getColor());
         }
 

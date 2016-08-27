@@ -13,7 +13,7 @@
     <net.qiujuer.sample.touchripple.widget.RippleButton
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        android:background="@color/grey_50"
+        android:background="@color/cyan_500"
         android:layout_centerInParent="true"
         android:text="RippleButton"
         android:gravity="center"

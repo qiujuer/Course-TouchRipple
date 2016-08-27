@@ -25,7 +25,7 @@ public class RippleButton extends Button {
 
     public RippleButton(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        mRippleDrawable = new RippleDrawable();
+        mRippleDrawable = new RippleDrawable(0x60000000);
         // 设置刷新接口, View 中已经实现
         mRippleDrawable.setCallback(this);
     }
